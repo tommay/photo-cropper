@@ -17,7 +17,7 @@ class Cropper
     init_ui
     byebug
 
-    # @photo_window.show_photo(args[0])
+    @photo_window.show_photo(args[0])
   end
 
   def init_ui
