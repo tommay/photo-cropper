@@ -1,0 +1,62 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    atk (3.0.8)
+      glib2 (= 3.0.8)
+    byebug (9.0.5)
+    cairo (1.15.2)
+      pkg-config (>= 1.1.5)
+    cairo-gobject (3.0.8)
+      cairo
+      glib2 (= 3.0.8)
+    exiv2 (0.0.8)
+    gdk3 (3.0.8)
+      cairo-gobject (= 3.0.8)
+      gdk_pixbuf2 (= 3.0.8)
+      gobject-introspection (= 3.0.8)
+      pango (= 3.0.8)
+    gdk_pixbuf2 (3.0.8)
+      glib2 (= 3.0.8)
+    gio2 (3.0.8)
+      glib2 (= 3.0.8)
+      gobject-introspection (= 3.0.8)
+    glib2 (3.0.8)
+      pkg-config
+    gobject-introspection (3.0.8)
+      glib2 (= 3.0.8)
+    gtk3 (3.0.8)
+      atk (= 3.0.8)
+      gdk3 (= 3.0.8)
+      gdk_pixbuf2 (= 3.0.8)
+      gio2 (= 3.0.8)
+      glib2 (= 3.0.8)
+      gobject-introspection (= 3.0.8)
+      pango (= 3.0.8)
+    mini_portile2 (2.1.0)
+    nokogiri (1.6.8)
+      mini_portile2 (~> 2.1.0)
+      pkg-config (~> 1.1.7)
+    pango (3.0.8)
+      cairo (>= 1.14.0)
+      glib2 (= 3.0.8)
+    pkg-config (1.1.7)
+    pratt_parser (0.1.2)
+    sequel (4.37.0)
+    sqlite3 (1.3.11)
+    trollop (2.1.2)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  byebug
+  exiv2
+  gtk3
+  nokogiri
+  pratt_parser
+  sequel
+  sqlite3
+  trollop
+
+BUNDLED WITH
+   1.12.5
