@@ -35,6 +35,8 @@ class Cropper
       o.position = :center
     end
 
+    @window.add(@photo_window.get_widget)
+
     @window.signal_connect("destroy") do
       Gtk.main_quit
     end
