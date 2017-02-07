@@ -6,12 +6,16 @@ class PhotoWindow
   Crop = Struct.new(:x, :y, :width, :height)
 
   def initialize
-    # @image is a Gtk::Image used for getting the on-screen size and for
-    # displaying a pixbuf with @image.set_pixbuf.  The actuaal widget used
-    # in layout is @event_box, obtained from get_widget.
+    # @image is a Gtk::DrawingArea used for getting the on-screen size
+    # and for displaying a framed/cropped pixbuf with cairo.  The
+    # actual widget used in layout is @event_box, obtained from
+    # get_widget.
 
-    @image = Gtk::Image.new.tap do |o|
+    @image= Gtk::DrawingArea.new.tap do |o|
       o.set_size_request(400, 400)
+      o.signal_connect("draw") do |widget, cr|
+        draw(widget, cr)
+      end
     end
 
     # Put @image into an event box so it can get mouse clicks and
@@ -32,7 +36,7 @@ class PhotoWindow
     @offset = Coord.new(0, 0)
 
     @image.signal_connect("size-allocate") do |widget, rectangle|
-      show_pixbuf
+      prepare_pixbuf
     end
 
     @event_box.signal_connect("button-press-event") do |widget, event|
@@ -54,9 +58,9 @@ class PhotoWindow
         delta = current - @last_motion_coord
         @last_motion_coord = current
 
-        if @scaled_pixbuf
+        if @cropped_pixbuf
           @offset = bound_offset(@offset - delta)
-          show_scaled_pixbuf
+          widget.queue_draw
         end
       end
 
@@ -101,19 +105,19 @@ class PhotoWindow
   end
 
   def show_photo(filename)
-    @pixbuf = filename && Gdk::Pixbuf.new(file: filename)
-    show_pixbuf
+    @pixbuf = filename && GdkPixbuf::Pixbuf.new(file: filename)
+    prepare_pixbuf
     GC.start
   end
 
-  def show_pixbuf
+  def prepare_pixbuf
     if @pixbuf
       @scale_factor = compute_scale(@scale, @image, @pixbuf)
       scale_pixbuf(@scale_factor)
       @offset = bound_offset(@offset)
-      show_scaled_pixbuf
+      crop_pixbuf
     else
-      @image.set_pixbuf(nil)
+      @cropped_pixbuf = nil
     end
   end
 
@@ -123,17 +127,17 @@ class PhotoWindow
       @last_pixbuf = @pixbuf
       @scaled_pixbuf =
         @pixbuf.scale(@pixbuf.width * scale, @pixbuf.height * scale)
+      GC.start
     end
   end
 
-  def show_scaled_pixbuf
+  def crop_pixbuf
     @crop = Crop.new(
       @offset.x, @offset.y,
       min(@image.allocated_width, @scaled_pixbuf.width),
       min(@image.allocated_height, @scaled_pixbuf.height))
-    cropped_pixbuf = Gdk::Pixbuf.new(
-      @scaled_pixbuf, @crop.x, @crop.y, @crop.width, @crop.height)
-    @image.set_pixbuf(cropped_pixbuf)
+    @cropped_pixbuf = @scaled_pixbuf.new_subpixbuf(
+      @crop.x, @crop.y, @crop.width, @crop.height)
   end
 
   def compute_scale(scale, image, pixbuf)
@@ -189,6 +193,44 @@ class PhotoWindow
 
   def get_event_coord(event)
     Coord.new(event.x, event.y)
+  end
+
+  def draw(widget, cr)
+    if @cropped_pixbuf
+      frame_width = 20
+
+      width = widget.allocated_width
+      height = widget.allocated_height
+
+      x = (width - @cropped_pixbuf.width) / 2
+      y = (height - @cropped_pixbuf.height) / 2
+
+      cr.set_source_pixbuf(@cropped_pixbuf, x, y)
+      cr.rectangle(x, y, @cropped_pixbuf.width, @cropped_pixbuf.height)
+      cr.fill
+
+      cr.set_source_rgba(0, 0, 0, 1.0)
+
+      # Left
+      cr.rectangle(0, 0, x + frame_width, height)
+
+      # Right
+      cr.rectangle(width - (x + frame_width), 0, x + frame_width, height)
+
+      # Top
+      cr.rectangle(0, 0, width, y + frame_width)
+
+      # Bottom
+      cr.rectangle(0, height - (y + frame_width), width, y + frame_width)
+
+      cr.fill
+    end
+
+    false
+  end
+
+  def min(a, b)
+    a < b ? a : b
   end
 end
 
