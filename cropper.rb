@@ -29,14 +29,18 @@ class Cropper
 
     radio_buttons = Gtk::Box.new(:vertical)
 
-    first = Gtk::RadioButton.new(label: "2:3").tap do |o|
-      radio_buttons.pack_start(o)
-    end
-    Gtk::RadioButton.new(label: "3:2", member: first).tap do |o|
-      radio_buttons.pack_start(o)
-    end
-    Gtk::RadioButton.new(label: "1:1", member: first).tap do |o|
-      radio_buttons.pack_start(o)
+    ["2:3", "3:2", "1:1"].reduce(nil) do |last, aspect|
+      Gtk::RadioButton.new(label: aspect, member: last).tap do |o|
+        radio_buttons.pack_start(o)
+        width, height = aspect.split(":").map{|n|n.to_i}
+        o.signal_connect("toggled") do |widget|
+          # Both the old and new radiobuttons get a toggled signal.
+          # We just care about the active one.
+          if widget.active?
+            @photo_window.set_aspect(width, height)
+          end
+        end
+      end
     end
 
     # The photo crop widget.

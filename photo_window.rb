@@ -68,6 +68,10 @@ class PhotoWindow
     end
   end
 
+  def set_aspect(width, height)
+    puts "aspect #{width} #{height}"
+  end
+
   def bound_offset(offset)
     x = bound(
       offset.x, 0,
