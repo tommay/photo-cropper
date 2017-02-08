@@ -15,34 +15,59 @@ class Cropper
   def initialize(args)
     GC.start
     init_ui
-    byebug
 
     @photo_window.show_photo(args[0])
   end
 
   def init_ui
-    # Create the widgets we actually care about and save in instance
-    # variables for use.  Then lay them out.
+    # Widget creation and layout are done as distinct steps.  It's
+    # possible and maybe more beautiful to things together using
+    # nested "tap" blocks, but it's less maintainable.  So usig
+    # distinct steps wins.
+
+    # A stack of radiobuttons for standard crop ratios.
+
+    radio_buttons = Gtk::Box.new(:vertical)
+
+    first = Gtk::RadioButton.new(label: "2:3").tap do |o|
+      radio_buttons.pack_start(o)
+    end
+    Gtk::RadioButton.new(label: "3:2", member: first).tap do |o|
+      radio_buttons.pack_start(o)
+    end
+    Gtk::RadioButton.new(label: "1:1", member: first).tap do |o|
+      radio_buttons.pack_start(o)
+    end
+
+    # The photo crop widget.
 
     @photo_window = PhotoWindow.new
 
-    # Create the top-levle window and put @photo_window in it.
+    # The main window.
 
-    @window = Gtk::Window.new.tap do |o|
-      o.title = "Cropper"
-      # o.override_background_color(:normal, Gdk::RGBA::new(0.2, 0.2, 0.2, 1))
-      o.set_default_size(300, 280)
-      o.position = :center
+    window = Gtk::Window.new.tap do |window|
+      window.title = "Cropper"
+      window.set_default_size(300, 280)
+      window.position = :center
     end
 
-    @window.add(@photo_window.get_widget)
+    # Lay out widgets in the main window.
 
-    @window.signal_connect("destroy") do
+    # Put the radio buttons and the photo window next to each other
+    # in a horizontal box.
+
+    Gtk::Box.new(:horizontal).tap do |hbox|
+      hbox.pack_start(radio_buttons)
+      hbox.pack_start(@photo_window.get_widget)
+      window.add(hbox)
+    end
+
+    window.signal_connect("destroy") do
       Gtk.main_quit
     end
 
-    #@window.maximize
-    @window.show_all
+    #window.maximize
+    window.show_all
   end
 end
 
