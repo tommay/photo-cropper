@@ -30,9 +30,23 @@ class PhotoWindow
       case event.type.nick
       when "button-press"
         @last_motion_coord = get_event_coord(event)
-      when "2button-press"
-        #zoom_to(get_event_coord(event))
       end
+      false
+    end
+
+    @event_box.signal_connect("motion-notify-event") do |widget, event|
+      # I'm not sure how things have gotten here without
+      # @last_motion_coord being set, but they have.
+
+      if @last_motion_coord
+        current = get_event_coord(event)
+        delta = @last_motion_coord - current
+        @last_motion_coord = current
+
+        @scaled_crop = @scaled_crop.delta(delta.x, delta.y)
+        @image.queue_draw
+      end
+
       false
     end
   end
@@ -54,7 +68,7 @@ class PhotoWindow
     if @pixbuf
       scale_factor = compute_scale(@image, @crop)
       scale_pixbuf(scale_factor)
-      @scaled_crop = @crop.scale(scale_factor)
+      @scaled_crop = @crop.scale_for(@scaled_pixbuf)
     else
       @scaled_pixbuf = nil
     end
@@ -85,6 +99,10 @@ class PhotoWindow
   #
   def get_widget
     @event_box
+  end
+
+  def get_event_coord(event)
+    Coord.new(event.x, event.y)
   end
 
   def draw(widget, cr)
@@ -171,22 +189,29 @@ class Crop
       end
     end
 
-    # Keep the same center and see where the new crop falls.
+    crop = Crop.new(@pixbuf, 0, 0, width, height)
 
-    center_x = @left + @width/2
-    center_y = @top + @height/2
+    # Try to keep the same center, but don't move outside the pixbuf.
 
-    left = center_x - width/2
-    right = center_x + width/2
-    top = center_y - height/2
-    bottom = center_y - height/2
+    crop.delta(@left + @width/2 - width/2, @top + @height/2 - height/2)
+  end
+
+  def scale_for(pixbuf)
+    factor = pixbuf.width.to_f / @pixbuf.width
+    Crop.new(
+      pixbuf, @left * factor, @top * factor, @width * factor, @height * factor)
+  end
+
+  def delta(x, y)
+    left = @left + x
+    top = @top + y
 
     # Adjust the position if it's off the pixbuf.
 
-    left = bound(left, 0, @pixbuf.width - width)
-    top = bound(top, 0, @pixbuf.height - height)
+    left = bound(left, 0, @pixbuf.width - @width)
+    top = bound(top, 0, @pixbuf.height - @height)
 
-    Crop.new(@pixbuf, left, top, width, height)
+    Crop.new(@pixbuf, left, top, @width, @height)
   end
 
   def bound(val, min, max)
@@ -199,9 +224,10 @@ class Crop
       val
     end
   end
+end
 
-  def scale(factor)
-    Crop.new(
-      nil, @left * factor, @top * factor, @width * factor, @height * factor)
+Coord = Struct.new(:x, :y) do
+  def -(other)
+    Coord.new(self.x - other.x, self.y - other.y)
   end
 end
