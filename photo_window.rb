@@ -24,13 +24,6 @@ class PhotoWindow
     @event_box = Gtk::EventBox.new
     @event_box.add(@image)
 
-    # @scale can be either :fit to fit the photo to the available
-    # screen space, or a nuneric scale factor.  In practice this will
-    # either be :fit, or 1 to display a portion of the image without
-    # scaling.
-
-    @scale = :fit
-
     # @offset is the upper left corner of the image to display.
 
     @offset = Coord.new(0, 0)
@@ -116,10 +109,8 @@ class PhotoWindow
 
   def prepare_pixbuf
     if @pixbuf
-      @scale_factor = compute_scale(@scale, @image, @pixbuf)
-      scale_pixbuf(@scale_factor)
-      @offset = bound_offset(@offset)
-      crop_pixbuf
+      scale_factor = compute_scale(@image, @pixbuf)
+      scale_pixbuf(scale_factor)
     else
       @cropped_pixbuf = nil
     end
@@ -144,16 +135,7 @@ class PhotoWindow
       @crop.x, @crop.y, @crop.width, @crop.height)
   end
 
-  def compute_scale(scale, image, pixbuf)
-    case scale
-    when :fit
-      compute_scale_to_fit(image, pixbuf)
-    else
-      scale
-    end
-  end
-
-  def compute_scale_to_fit(image, pixbuf)
+  def compute_scale(image, pixbuf)
     image_width = image.allocated_width
     pixbuf_width = pixbuf.width
     width_scale = image_width.to_f / pixbuf_width
