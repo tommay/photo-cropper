@@ -62,7 +62,7 @@ class Cropper
 
     Gtk::Box.new(:horizontal).tap do |hbox|
       hbox.pack_start(radio_buttons)
-      hbox.pack_start(@photo_window.get_widget)
+      hbox.pack_start(@photo_window.get_widget, expand: true, fill: true)
       window.add(hbox)
     end
 
