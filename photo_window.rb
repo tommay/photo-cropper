@@ -3,8 +3,6 @@ require "gtk3"
 # This class's use of instance variables is atrocious.
 
 class PhotoWindow
-  Crop = Struct.new(:x, :y, :width, :height)
-
   def initialize
     # @image is a Gtk::DrawingArea used for getting the on-screen size
     # and for displaying a framed/cropped pixbuf with cairo.  The
@@ -24,10 +22,6 @@ class PhotoWindow
     @event_box = Gtk::EventBox.new
     @event_box.add(@image)
 
-    # @offset is the upper left corner of the image to display.
-
-    @offset = Coord.new(0, 0)
-
     @image.signal_connect("size-allocate") do |widget, rectangle|
       prepare_pixbuf
     end
@@ -39,24 +33,6 @@ class PhotoWindow
       when "2button-press"
         zoom_to(get_event_coord(event))
       end
-      false
-    end
-
-    @event_box.signal_connect("motion-notify-event") do |widget, event|
-      # I'm not sure how things have gotten here without
-      # @last_motion_coord being set, but they have.
-
-      if @last_motion_coord
-        current = get_event_coord(event)
-        delta = current - @last_motion_coord
-        @last_motion_coord = current
-
-        if @cropped_pixbuf
-          @offset = bound_offset(@offset - delta)
-          widget.queue_draw
-        end
-      end
-
       false
     end
   end
@@ -112,7 +88,7 @@ class PhotoWindow
       scale_factor = compute_scale(@image, @pixbuf)
       scale_pixbuf(scale_factor)
     else
-      @cropped_pixbuf = nil
+      @scaled_pixbuf = nil
     end
   end
 
@@ -124,15 +100,6 @@ class PhotoWindow
         @pixbuf.scale(@pixbuf.width * scale, @pixbuf.height * scale)
       GC.start
     end
-  end
-
-  def crop_pixbuf
-    @crop = Crop.new(
-      @offset.x, @offset.y,
-      min(@image.allocated_width, @scaled_pixbuf.width),
-      min(@image.allocated_height, @scaled_pixbuf.height))
-    @cropped_pixbuf = @scaled_pixbuf.new_subpixbuf(
-      @crop.x, @crop.y, @crop.width, @crop.height)
   end
 
   def compute_scale(image, pixbuf)
@@ -148,29 +115,6 @@ class PhotoWindow
     scale > 1 ? 1 : scale
   end
 
-  def zoom_to(event_coord)
-    # Pan to event_coord
-
-    pixbuf_coord = get_pixbuf_coord(event_coord)
-
-    crop_width = min(@image.allocated_width, @pixbuf.width)
-    crop_height = min(@image.allocated_height, @pixbuf.height)
-
-    @offset = pixbuf_coord - Coord.new(crop_width / 2, crop_height / 2)
-
-    # And zoom to full scale.
-
-    set_scale(1)
-  end
-
-  def get_pixbuf_coord(event_coord)
-    excess_width = @image.allocated_width - @crop.width
-    x = (event_coord.x - excess_width / 2 + @crop.x) / @scale_factor
-    excess_height = @image.allocated_height - @crop.height
-    y = (event_coord.y - excess_height / 2 + @crop.y) / @scale_factor
-    Coord.new(x, y)
-  end
-
   # This is only for packing the window layout, yuck.
   #
   def get_widget
@@ -182,17 +126,17 @@ class PhotoWindow
   end
 
   def draw(widget, cr)
-    if @cropped_pixbuf
+    if @scaled_pixbuf
       frame_width = 20
 
       width = widget.allocated_width
       height = widget.allocated_height
 
-      x = (width - @cropped_pixbuf.width) / 2
-      y = (height - @cropped_pixbuf.height) / 2
+      x = (width - @scaled_pixbuf.width) / 2
+      y = (height - @scaled_pixbuf.height) / 2
 
-      cr.set_source_pixbuf(@cropped_pixbuf, x, y)
-      cr.rectangle(x, y, @cropped_pixbuf.width, @cropped_pixbuf.height)
+      cr.set_source_pixbuf(@scaled_pixbuf, x, y)
+      cr.rectangle(x, y, @scaled_pixbuf.width, @scaled_pixbuf.height)
       cr.fill
 
       cr.set_source_rgba(0, 0, 0, 1.0)
