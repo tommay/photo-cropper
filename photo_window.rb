@@ -1,7 +1,5 @@
 require "gtk3"
 
-# This class's use of instance variables is atrocious.
-
 class PhotoWindow
   def initialize
     # @image is a Gtk::DrawingArea used for getting the on-screen size
@@ -117,5 +115,65 @@ class PhotoWindow
     end
 
     false
+  end
+end
+
+# Are the crop coordinates in screen coordinates in image coordinates?
+# Panning the image and adjusting the frame will be done in screen
+# coordinates.
+# Try image coordinates.
+
+class Crop
+  def self.for_pixbuf(pixbuf)
+    new(0, 0, pixbuf.width, pixbuf.height)
+  end
+
+  def initialize(left, top, width, height)
+    @left = left
+    @top = top
+    @width = width
+    @height = height
+  end
+
+  def set_aspect(aspect_width, aspect_height)
+    aspect = aspect_width.to_f / aspect_height.to_f
+    if @height > @width
+      # Existing crop is portrait.  Keep the existing height and
+      # compute the width.
+      height = @height
+      width = height * aspect
+      if width > @pixbuf.width
+        # Too wide.  Maximize the width and reduce the height.
+        width = @pixbuf.width
+        height = width / aspect
+      end
+    else
+      # Existing crop is landscaoe.  Keep the existing width and
+      # compute the height.
+      width = @width
+      height = width / aspect
+      if height > @pixbuf.height
+        # Too high.  Maximize the height and reduce the width.
+        height = @pixbuf,height
+        width = height * aspect
+      end
+    end
+
+    # Keep the same center and see where the new crop falls.
+
+    center_x = @left + @width/2
+    center_y = @top + @height/2
+
+    left = center_x - width/2
+    right = center_x + width/2
+    top = center_y - height/2
+    bottom = center_y - height/2
+
+    # Adjust the position if it's off the pixbuf.
+
+    left = bound(left, 0, @pixbuf.width - width)
+    top = bound(top, 0, @pixbuf.height - height)
+
+    Crop.new(left, top, width, height)
   end
 end
