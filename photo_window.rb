@@ -31,7 +31,7 @@ class PhotoWindow
       when "button-press"
         @last_motion_coord = get_event_coord(event)
       when "2button-press"
-        zoom_to(get_event_coord(event))
+        #zoom_to(get_event_coord(event))
       end
       false
     end
@@ -39,42 +39,6 @@ class PhotoWindow
 
   def set_aspect(width, height)
     puts "aspect #{width} #{height}"
-  end
-
-  def bound_offset(offset)
-    x = bound(
-      offset.x, 0,
-      max(@scaled_pixbuf.width - @image.allocated_width, 0))
-
-    y = bound(
-      offset.y, 0,
-      max(@scaled_pixbuf.height - @image.allocated_height, 0))
-
-    Coord.new(x, y)
-  end
-
-  def bound(val, min, max)
-    case
-    when val < min
-      min
-    when val > max
-      max
-    else
-      val
-    end
-  end
-
-  def max(a, b)
-    a > b ? a : b
-  end
-
-  def min(a, b)
-    a < b ? a : b
-  end
-
-  def set_scale(scale)
-    @scale = scale
-    show_pixbuf
   end
 
   def show_photo(filename)
@@ -121,10 +85,6 @@ class PhotoWindow
     @event_box
   end
 
-  def get_event_coord(event)
-    Coord.new(event.x, event.y)
-  end
-
   def draw(widget, cr)
     if @scaled_pixbuf
       frame_width = 20
@@ -157,15 +117,5 @@ class PhotoWindow
     end
 
     false
-  end
-
-  def min(a, b)
-    a < b ? a : b
-  end
-end
-
-Coord = Struct.new(:x, :y) do
-  def -(other)
-    Coord.new(self.x - other.x, self.y - other.y)
   end
 end
