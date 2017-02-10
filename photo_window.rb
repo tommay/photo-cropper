@@ -1,7 +1,7 @@
 require "gtk3"
 
 class PhotoWindow
-  FRAME_PIXELS = 4
+  FRAME_PIXELS = 10
 
   def initialize
     # @image is a Gtk::DrawingArea used for getting the on-screen size
@@ -117,8 +117,8 @@ class PhotoWindow
 
       # (x,y) are upper left widget coordinate for the cropped image.
 
-      x = (width - cropped_pixbuf.width) / 2 + FRAME_PIXELS
-      y = (height - cropped_pixbuf.height) / 2 + FRAME_PIXELS
+      x = (width - cropped_pixbuf.width) / 2
+      y = (height - cropped_pixbuf.height) / 2
 
       cr.set_source_pixbuf(cropped_pixbuf, x, y)
       cr.rectangle(x, y, cropped_pixbuf.width, cropped_pixbuf.height)
