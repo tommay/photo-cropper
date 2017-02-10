@@ -61,7 +61,6 @@ class PhotoWindow
     @pixbuf = filename && GdkPixbuf::Pixbuf.new(file: filename)
     @crop = Crop.for_pixbuf(@pixbuf).set_aspect(2, 3)
     prepare_pixbuf
-    GC.start
   end
 
   def prepare_pixbuf
@@ -72,6 +71,7 @@ class PhotoWindow
     else
       @scaled_pixbuf = nil
     end
+    GC.start
   end
 
   def compute_scale(widget, crop)
@@ -141,6 +141,7 @@ class PhotoWindow
       cr.fill
     end
 
+    GC.start
     false
   end
 end
