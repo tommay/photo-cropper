@@ -40,7 +40,7 @@ class PhotoWindow
 
       if @last_motion_coord
         current = get_event_coord(event)
-        delta = @last_motion_coord - current
+        delta = (@last_motion_coord - current).round
         @last_motion_coord = current
 
         @scaled_crop = @scaled_crop.delta(delta.x, delta.y)
@@ -90,7 +90,8 @@ class PhotoWindow
       @last_scale = scale
       @last_pixbuf = @pixbuf
       @scaled_pixbuf =
-        @pixbuf.scale(@pixbuf.width * scale, @pixbuf.height * scale)
+        @pixbuf.scale((@pixbuf.width * scale).round,
+                      (@pixbuf.height * scale).round)
       GC.start
     end
   end
@@ -107,15 +108,14 @@ class PhotoWindow
 
   def draw(widget, cr)
     if @scaled_pixbuf
+      width = widget.allocated_width
+      height = widget.allocated_height
 
       cropped_pixbuf = @scaled_pixbuf.new_subpixbuf(
         @scaled_crop.left, @scaled_crop.top,
         @scaled_crop.width, @scaled_crop.height)
 
-      width = widget.allocated_width
-      height = widget.allocated_height
-
-      # (x,y) are upper left widget coordinate for the cropped image.
+      # (x,y) ia the upper left widget coordinate for the cropped image.
 
       x = (width - cropped_pixbuf.width) / 2
       y = (height - cropped_pixbuf.height) / 2
@@ -130,13 +130,13 @@ class PhotoWindow
       cr.rectangle(0, 0, x, height)
 
       # Right
-      cr.rectangle(width - x, 0, width, height)
+      cr.rectangle(x + cropped_pixbuf.width, 0, width, height)
 
       # Top
       cr.rectangle(0, 0, width, y)
 
       # Bottom
-      cr.rectangle(0, height - y, width, height)
+      cr.rectangle(0, y + cropped_pixbuf.height, width, height)
 
       cr.fill
     end
@@ -155,15 +155,31 @@ class Crop
   attr_reader :left, :top, :width, :height
 
   def self.for_pixbuf(pixbuf)
-    new(pixbuf, 0, 0, pixbuf.width, pixbuf.height)
+    new(pixbuf, pixbuf.width.to_f / pixbuf.height,
+        0, 0, pixbuf.width, pixbuf.height)
   end
 
-  def initialize(pixbuf, left, top, width, height)
+  def initialize(pixbuf, aspect, left, top, width, height)
     @pixbuf = pixbuf
+    @aspect = aspect
     @left = left
     @top = top
     @width = width
     @height = height
+  end
+
+  def initialize(pixbuf, aspect, left, top, width, height)
+    @pixbuf = pixbuf
+    @aspect = aspect
+    @left = left
+    @top = top
+    @width = width
+    @height = height
+  end
+
+  def copy(pixbuf: @pixbuf, aspect: @aspect, left: @left, top: @top,
+           width: @width, height: @height)
+    Crop.new(pixbuf, aspect, left, top, width, height)
   end
 
   def set_aspect(aspect_width, aspect_height)
@@ -190,17 +206,22 @@ class Crop
       end
     end
 
-    crop = Crop.new(@pixbuf, 0, 0, width, height)
+    crop = copy(
+      aspect: aspect, left: 0, top: 0, width: width, height: height)
 
     # Try to keep the same center, but don't move outside the pixbuf.
 
-    crop.delta(@left + @width/2 - width/2, @top + @height/2 - height/2)
+    crop.delta(@left + (@width - width)/2, @top + (@height - height)/2)
   end
 
   def scale_for(pixbuf)
     factor = pixbuf.width.to_f / @pixbuf.width
-    Crop.new(
-      pixbuf, @left * factor, @top * factor, @width * factor, @height * factor)
+    copy(
+      pixbuf: pixbuf,
+      left: (@left * factor).to_i,
+      top: (@top * factor).to_i,
+      width: (@width * factor).to_i,
+      height: (@height * factor).to_i)
   end
 
   def delta(x, y)
@@ -212,7 +233,7 @@ class Crop
     left = bound(left, 0, @pixbuf.width - @width)
     top = bound(top, 0, @pixbuf.height - @height)
 
-    Crop.new(@pixbuf, left, top, @width, @height)
+    copy(left: left, top: top)
   end
 
   def bound(val, min, max)
@@ -230,5 +251,9 @@ end
 Coord = Struct.new(:x, :y) do
   def -(other)
     Coord.new(self.x - other.x, self.y - other.y)
+  end
+
+  def round
+    Coord.new(self.x.round, self.y.round)
   end
 end
