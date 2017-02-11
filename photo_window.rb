@@ -1,5 +1,7 @@
 require "gtk3"
 
+require_relative "crop_dragger"
+
 class PhotoWindow
   FRAME_PIXELS = 10
 
@@ -29,25 +31,52 @@ class PhotoWindow
     @event_box.signal_connect("button-press-event") do |widget, event|
       case event.type.nick
       when "button-press"
-        @last_motion_coord = get_event_coord(event)
+        # This is modified from the draw method.  DRY things up.
+
+        width = widget.allocated_width
+        height = widget.allocated_height
+
+        # (x,y) is the upper left widget coordinate for the cropped image.
+
+        x = (width - @scaled_crop.width) / 2
+        y = (height - @scaled_crop.height) / 2
+
+        click = get_event_coord(event)
+
+        do_left = click.x < x
+        do_right = click.x >= x + @scaled_crop.width
+        do_top = click.y < y
+        do_bottom = click.y >= y + @scaled_crop.height
+
+        @motion_handler =
+          if do_left || do_right || do_top || do_bottom
+            crop_dragger = CropDragger.new(
+              click, @scaled_crop, do_left, do_right, do_top, do_bottom)
+            lambda do |widget, event|
+              current = get_event_coord(event)
+              #XXX what is the deal with @crop and @scaled_crop?
+              #do they need to be in sync?
+              @scaled_crop = crop_dragger.drag(current)
+              @image.queue_draw
+              false
+            end
+          else
+            scaled_crop = @scaled_crop
+            lambda do |widget, event|
+              current = get_event_coord(event)
+              delta = (click - current).round
+              @scaled_crop = scaled_crop.delta(delta.x, delta.y)
+              @image.queue_draw
+              false
+            end
+          end
       end
+
       false
     end
 
     @event_box.signal_connect("motion-notify-event") do |widget, event|
-      # I'm not sure how things have gotten here without
-      # @last_motion_coord being set, but they have.
-
-      if @last_motion_coord
-        current = get_event_coord(event)
-        delta = (@last_motion_coord - current).round
-        @last_motion_coord = current
-
-        @scaled_crop = @scaled_crop.delta(delta.x, delta.y)
-        @image.queue_draw
-      end
-
-      false
+      @motion_handler && @motion_handler.call(widget, event)
     end
   end
 
